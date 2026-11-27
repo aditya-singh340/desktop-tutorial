@@ -1,0 +1,6 @@
+streamlit
+pandas
+plotly
+reportlab<5
+Pillow>=9.2,<12
+openpyxl
