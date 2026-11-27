@@ -18,7 +18,6 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import getSampleStyleSheet
 
-
 # ================= PAGE CONFIG =================
 
 st.set_page_config(
@@ -27,14 +26,12 @@ st.set_page_config(
     layout="wide"
 )
 
-
 # ================= DATABASE =================
 
 def get_connection():
     conn = sqlite3.connect("blood_donors.db")
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def create_tables():
 
@@ -119,7 +116,6 @@ def create_tables():
         )
     """)
 
-    # Keep compatibility with older blood_requests table versions.
     cursor.execute("PRAGMA table_info(blood_requests)")
     request_columns = {row[1] for row in cursor.fetchall()}
     request_migrations = {
@@ -142,7 +138,6 @@ def create_tables():
                 f"ALTER TABLE blood_requests ADD COLUMN {column} {definition}"
             )
 
-    # Backfill both username fields for records created by older versions.
     request_columns.update(request_migrations.keys())
     if "requester_username" in request_columns and "username" in request_columns:
         cursor.execute("""
@@ -159,15 +154,12 @@ def create_tables():
     conn.commit()
     conn.close()
 
-
 create_tables()
-
 
 # ================= PASSWORD HASH =================
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
-
 
 # ================= SESSION STATE =================
 
@@ -181,7 +173,6 @@ for key, value in defaults.items():
 
     if key not in st.session_state:
         st.session_state[key] = value
-
 
 # ================= CSS DESIGN =================
 
@@ -243,17 +234,18 @@ div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-
 # ================= HEADER =================
 
 st.markdown("""
 <div class="main-title">
     <h1>🩸 Blood Donors Management System</h1>
     <h3>Donate Blood - Save Lives</h3>
-    <p>A Smart Platform for Blood Donor Management</p>
+    <p>A Smart Platform for Blood Donor Management | Barabanki, UP</p>
 </div>
 """, unsafe_allow_html=True)
 
+# Emergency Banner - Business Style
+st.error("🚨 EMERGENCY ME BLOOD CHAHIYE? Sidebar me 'Emergency Blood Request' pe click karein ya Contact Us pe call karein.")
 
 # ================= SIDEBAR =================
 
@@ -270,7 +262,6 @@ if st.session_state.admin_logged_in:
 
     st.sidebar.success("Administrator Logged In")
 
-
 menu = st.sidebar.radio(
     "Navigation",
     [
@@ -285,6 +276,8 @@ menu = st.sidebar.radio(
         "Search Donors",
         "Donor Reports",
         "All Donors",
+        "Hospitals in Barabanki",
+        "Contact Us",
         "Admin Login",
         "Admin Dashboard",
         "Update Donor",
@@ -294,9 +287,11 @@ menu = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("### 📞 Need Help?")
+st.sidebar.write("📍 Bheta, Barabanki, UP")
+st.sidebar.write("📞 +91 90000 00000")
 st.sidebar.caption("Blood Donors Management System")
 st.sidebar.caption("Python | Streamlit | SQLite")
-
 
 # ================= HOME =================
 
@@ -432,6 +427,9 @@ if menu == "Home":
     b.info("🔍 Quick Search\n\nFind donors by blood group and city.")
     c.info("📊 Smart Reports\n\nDownload donor reports.")
 
+    st.markdown("---")
+    st.subheader("🤝 For Hospitals & Blood Banks - Business Tie-up")
+    st.write("Agar aap hospital / blood bank se hai aur donor chahiye, to Contact Us page pe sampark karein. Hum Barabanki me fast donor provide karte hai.")
 
 # ================= USER REGISTRATION =================
 
@@ -504,7 +502,6 @@ elif menu == "User Registration":
 
                 finally:
                     conn.close()
-
 
 # ================= USER LOGIN =================
 
@@ -588,7 +585,6 @@ elif menu == "User Login":
 
                         conn.close()
                         st.error("Username not found. Please register first.")
-
 
 # ================= DONOR REGISTRATION =================
 
@@ -684,7 +680,6 @@ elif menu == "Donor Registration":
 
                     st.success("Donor Registered Successfully!")
 
-
 # ================= SEARCH DONORS =================
 
 elif menu == "Search Donors":
@@ -762,8 +757,6 @@ elif menu == "Search Donors":
 
             st.warning("No donors found.")
 
-
-
 # ================= DONOR AVAILABILITY =================
 
 elif menu == "Donor Availability":
@@ -787,7 +780,6 @@ elif menu == "Donor Availability":
                 st.success("Availability updated successfully!")
                 st.rerun()
         conn.close()
-
 
 # ================= EMERGENCY BLOOD REQUEST =================
 
@@ -814,7 +806,6 @@ elif menu == "Emergency Blood Request":
             else:
                 conn = get_connection()
                 try:
-                    # Some older databases require requester_username instead of username.
                     schema_cursor = conn.execute("PRAGMA table_info(blood_requests)")
                     available_columns = {row[1] for row in schema_cursor.fetchall()}
                     request_values = {
@@ -836,8 +827,6 @@ elif menu == "Emergency Blood Request":
                     ]
                     placeholders = ",".join(["?"] * len(insert_columns))
                     column_sql = ",".join(insert_columns)
-                    # Fill any legacy NOT NULL columns that this app version does not use.
-                    # This keeps older SQLite table layouts compatible without deleting data.
                     table_info = conn.execute("PRAGMA table_info(blood_requests)").fetchall()
                     for column_info in table_info:
                         col_name = column_info[1]
@@ -877,7 +866,6 @@ elif menu == "Emergency Blood Request":
                 finally:
                     conn.close()
 
-
 # ================= MY BLOOD REQUESTS =================
 
 elif menu == "My Blood Requests":
@@ -893,7 +881,6 @@ elif menu == "My Blood Requests":
             st.info("You have not submitted any blood requests.")
         else:
             st.dataframe(requests_df, use_container_width=True, hide_index=True)
-
 
 # ================= ADMIN REQUEST APPROVAL =================
 
@@ -919,7 +906,6 @@ elif menu == "Admin Manage Requests":
             st.markdown("#### Download Request Report")
             req_csv = req_df.to_csv(index=False).encode("utf-8")
             st.download_button("Download Requests CSV", req_csv, "Blood_Requests_Report.csv", "text/csv", key="requests_csv")
-            # Generate a simple PDF request report using already-installed ReportLab.
             pdf_buffer = BytesIO()
             pdf_doc = SimpleDocTemplate(pdf_buffer, pagesize=landscape(A4))
             pdf_styles = getSampleStyleSheet()
@@ -933,7 +919,6 @@ elif menu == "Admin Manage Requests":
             pdf_doc.build(pdf_elements)
             st.download_button("Download Requests PDF", pdf_buffer.getvalue(), "Blood_Requests_Report.pdf", "application/pdf", key="requests_pdf")
         conn.close()
-
 
 # ================= DONOR REPORTS PDF + CSV =================
 
@@ -979,8 +964,6 @@ elif menu == "Donor Reports":
                 hide_index=True
             )
 
-            # CSV DOWNLOAD
-
             csv_data = df.to_csv(index=False).encode("utf-8")
 
             st.download_button(
@@ -991,8 +974,6 @@ elif menu == "Donor Reports":
             )
 
             st.markdown("---")
-
-            # PDF GENERATION
 
             st.subheader("📄 PDF Report")
 
@@ -1121,7 +1102,6 @@ elif menu == "Donor Reports":
 
             st.info("No donor records available.")
 
-
 # ================= ALL DONORS =================
 
 elif menu == "All Donors":
@@ -1158,6 +1138,45 @@ elif menu == "All Donors":
 
             st.info("No donors available.")
 
+# ================= HOSPITALS =================
+
+elif menu == "Hospitals in Barabanki":
+
+    st.markdown('<p class="section-title">🏥 Hospitals in Barabanki</p>', unsafe_allow_html=True)
+    st.info("Emergency me seedha hospital ko call karein. Ye list public info se hai.")
+
+    hospitals = [
+        ["District Hospital Barabanki", "Barabanki City", "05248-222222", "24x7 Emergency"],
+        ["Mayo Medical Centre", "Barabanki", "05248-220001", "Blood Bank Available"],
+        ["Shree Ram Hospital", "Barabanki", "94500-00000", "General Hospital"],
+        ["City Hospital & Trauma Centre", "Barabanki", "94500-00001", "Emergency"],
+    ]
+    st.dataframe(pd.DataFrame(hospitals, columns=["Hospital", "Area", "Phone", "Facility"]), use_container_width=True, hide_index=True)
+    st.warning("Note: Upar wale number example hai. Apne asli hospital ke number yaha daal dena.")
+
+# ================= CONTACT US =================
+
+elif menu == "Contact Us":
+
+    st.markdown('<p class="section-title">📞 Contact Us - Blood Seva Barabanki</p>', unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Aditya Singh - Founder")
+        st.write("📍 Bheta, Barabanki, Uttar Pradesh")
+        st.write("📞 Phone: +91 90000 00000")
+        st.write("📧 Email: aditya.bloodbank@gmail.com")
+        st.link_button("🟢 WhatsApp pe Message Karein", "https://wa.me/919000000000")
+    with c2:
+        st.subheader("Hame Message Bhejein")
+        with st.form("contact_form"):
+            c_name = st.text_input("Apna Naam")
+            c_msg = st.text_area("Message")
+            if st.form_submit_button("Send Message"):
+                st.success(f"Dhanyavaad {c_name}! Hum jald contact karenge.")
+
+    st.markdown("---")
+    st.write("**Business ke liye sampark karein:** Hospital Tie-up, Blood Camp, Sponsorship ke liye upar wale number pe call karein.")
 
 # ================= ADMIN LOGIN =================
 
@@ -1199,7 +1218,6 @@ elif menu == "Admin Login":
                 else:
 
                     st.error("Invalid Admin Username or Password.")
-
 
 # ================= ADMIN DASHBOARD =================
 
@@ -1259,7 +1277,6 @@ elif menu == "Admin Dashboard":
             use_container_width=True,
             hide_index=True
         )
-
 
 # ================= UPDATE DONOR =================
 
@@ -1393,7 +1410,6 @@ elif menu == "Update Donor":
 
         conn.close()
 
-
 # ================= DELETE DONOR =================
 
 elif menu == "Delete Donor":
@@ -1461,7 +1477,6 @@ elif menu == "Delete Donor":
             else:
                 conn.close()
 
-
 # ================= LOGOUT =================
 
 elif menu == "Logout":
@@ -1472,7 +1487,6 @@ elif menu == "Logout":
 
     st.success("Logged Out Successfully!")
 
-
 # ================= FOOTER =================
 
 st.markdown("---")
@@ -1481,6 +1495,7 @@ st.markdown("""
 <div class="footer">
     <h3>🩸 Blood Donors Management System</h3>
     <p>Donate Blood | Save Lives | Help Humanity</p>
-    <p>Developed with Python, Streamlit, SQLite and Plotly</p>
+    <p>Developed with Python, Streamlit, SQLite and Plotly | Barabanki, UP</p>
+    <p>For Business Tie-up: Contact Us Page pe sampark karein</p>
 </div>
 """, unsafe_allow_html=True)
